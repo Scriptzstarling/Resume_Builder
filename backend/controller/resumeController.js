@@ -126,27 +126,77 @@ const getResumeById = async (req, res) => {
 // @route   PUT /api/resumes/:id
 // @access  Private
 const updateResume = async (req, res) => {
-     try {
-    } catch (error) {
-        res
+  try {
+    const resume = await Resume.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found or unauthorized" });
+    }
+
+    // Merge updates from req.body into existing resume
+    Object.assign(resume, req.body);
+
+    // Save updated resume
+    const savedResume = await resume.save();
+
+    res.json(savedResume);
+  } catch (error) {
+    res
       .status(500)
       .json({ message: "Failed to create resume", error: error.message });
-        
-    }
+  }
 };
+
 
 // @desc    Delete a resume
 // @route   DELETE /api/resumes/:id
 // @access  Private
+
 const deleteResume = async (req, res) => {
-     try {
-    } catch (error) {
-        res
-      .status(500)
-      .json({ message: "Failed to create resume", error: error.message });
-        
+  try {
+    const resume = await Resume.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found or unauthorized" });
     }
+
+    // Delete thumbnailLink and profilePreviewUrl images from uploads folder
+    const uploadsFolder = path.join(__dirname, "..", "uploads");
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    
+    if (resume.thumbnailLink) {
+      const oldThumbnail = path.join(uploadsFolder, path.basename(resume.thumbnailLink));
+      if (fs.existsSync(oldThumbnail)) fs.unlinkSync(oldThumbnail);
+    }
+
+    if (resume.profileInfo?.profilePreviewUrl) {
+      const oldProfile = path.join(uploadsFolder, path.basename(resume.profileInfo.profilePreviewUrl));
+      if (fs.existsSync(oldProfile)) fs.unlinkSync(oldProfile);
+    }
+
+    const deleted = await Resume.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Resume not found or unauthorized" });
+    }
+
+    res.json({ message: "Resume deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete resume", error: error.message });
+  }
 };
+
+module.exports = deleteResume;
+
 
 module.exports = {
   createResume,
