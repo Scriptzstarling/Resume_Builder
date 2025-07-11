@@ -4,14 +4,23 @@ import HERO_IMG from "../assets/hero-img.png";
 import SignUp from "./Auth/SignUp";
 import Login from "./Auth/Login";
 import Modal from "../components/Modal";
+import { useContext } from "react";
+import { UserContext } from "../context/userContext";
+import ProfileInfoCard from "../components/Cards/ProfileInfoCard";
 
 const LandingPage = () => {
+  const { user } = useContext(UserContext)
   const navigate = useNavigate();
-  const [openAuthModal, setOpenAuthModal] = useState(true);
+  const [openAuthModal, setOpenAuthModal] = useState(false);
   const [currentPage, setCurrentPage] = useState("login");
 
   const handleCTA = () => {
-    setOpenAuthModal(true);
+    if (!user) {
+      setOpenAuthModal(true);
+    } else {
+      navigate("/dashboard");
+    }
+    
   };
 
   return (
@@ -19,12 +28,16 @@ const LandingPage = () => {
       <div className="container mx-auto px-4 py-6">
         <header className="flex justify-between items-center mb-16">
           <div className="text-xl font-bold">Resume Builder</div>
+         {user ? (
+            <ProfileInfoCard />
+         )  : (
           <button
             className="bg-purple-100 text-sm font-semibold text-black px-7 py-2.5 rounded-lg hover:bg-gray-800 hover:text-white transition-colors cursor-pointer"
             onClick={handleCTA}
           >
             Login / Sign Up
           </button>
+        )}
         </header>
 
         {/* Hero Content */}

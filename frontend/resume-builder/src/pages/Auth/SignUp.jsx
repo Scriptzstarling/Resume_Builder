@@ -1,16 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../../components/Inputs/Input";
 import { validateEmail } from "../../utills/helper";
 import ProfilePhotoSelector from "../../components/Inputs/ProfilePhotoSelector";
+import axiosInstance from "../../utills/axiosinstance";
+import { API_PATHS } from "../../utills/apiPaths";
+import { UserContext } from "../../context/userContext";
+import uploadImage from "../../utills/uploadImage";
 
 const SignUp = ({ setCurrentPage }) => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [profilepic, setProfilePic] = useState(null);
+  const [profilePic, setProfilePic] = useState(null); // Consistent variable name
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState(null);
+
+  const { updateUser } = useContext(UserContext);
   const navigate = useNavigate();
 
   const handleSignUp = async (e) => {
@@ -34,11 +40,36 @@ const SignUp = ({ setCurrentPage }) => {
     setError("");
 
     try {
-      console.log("Signup successful!");
-      // You can pass profilepic (file) and other info to API here
+      let profileImageUrl = "";
+      if (profilePic) {
+        const imgUploadRes = await uploadImage(profilePic);
+        profileImageUrl = imgUploadRes.imageUrl || "";
+      }
+
+      const response = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {
+        name: fullName,
+        email,
+        password,
+        profileImageUrl,
+      });
+
+      console.log("API Response:", response.data); // Debugging line
+
+      const { token } = response.data;
+
+      if (token) {
+        localStorage.setItem("token", token);
+        updateUser(response.data);
+        navigate("/dashboard");
+      } else {
+        setError("Registration failed. No token received.");
+      }
     } catch (error) {
-      console.error("Signup error:", error);
-      setError("Something went wrong. Please try again.");
+      if (error.response && error.response.data && error.response.data.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     }
   };
 
@@ -51,7 +82,7 @@ const SignUp = ({ setCurrentPage }) => {
 
       <form onSubmit={handleSignUp}>
         <ProfilePhotoSelector
-          image={profilepic}
+          image={profilePic}
           setImage={setProfilePic}
           preview={preview}
           setPreview={setPreview}
